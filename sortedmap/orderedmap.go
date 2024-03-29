@@ -11,6 +11,10 @@ type (
 	}
 )
 
+func (m *OrderedMap[K, V]) GetMaps() map[K]*Entry[K, V] {
+	return m.entries
+}
+
 func NewInit[K comparable, V any]() *OrderedMap[K, V] {
 	m := OrderedMap[K, V]{
 		entries: make(map[K]*Entry[K, V]),
