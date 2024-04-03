@@ -17,7 +17,7 @@ type Option func(c *ormLogger)
 
 func WithSlowThreshold(threshold time.Duration) Option {
 	return func(c *ormLogger) {
-		c.SlowThreshold = threshold
+		c.SlowThreshold = threshold * time.Millisecond
 	}
 }
 
