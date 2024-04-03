@@ -1,1 +1,4 @@
 .idea
+
+live/*.go
+live/protobuf/*.*
