@@ -14,10 +14,10 @@ import (
 type (
 	LogConfig struct {
 		Level      string `json:"level" yaml:"level" default:"info" description:"日志级别"`
-		Filename   string `json:"filename" yaml:"filename" default:"logs/go-mall.log" description:"日志文件路径"`
-		MaxSize    int    `json:"max_size" yaml:"max_size" default:"100" description:"日志文件最大大小(MB)"`
-		MaxAge     int    `json:"max_age" yaml:"max_age" default:"7" description:"日志文件最大保存天数"`
-		MaxBackups int    `json:"max_backups" yaml:"max_backups" default:"10" description:"日志文件最多保存多少个备份"`
+		Filename   string `json:"fileName" yaml:"fileName" default:"logs/go-mall.log" description:"日志文件路径"`
+		MaxSize    int    `json:"maxSize" yaml:"maxSize" default:"100" description:"日志文件最大大小(MB)"`
+		MaxAge     int    `json:"maxAge" yaml:"maxAge" default:"7" description:"日志文件最大保存天数"`
+		MaxBackups int    `json:"maxBackups" yaml:"maxBackups" default:"10" description:"日志文件最多保存多少个备份"`
 	}
 )
 
