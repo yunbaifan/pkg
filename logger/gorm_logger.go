@@ -4,10 +4,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
+	"go.uber.org/zap"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
 	"time"
 )
+
+var (
+	Logger *ZapLogger
+)
+
+type ZapLogger *zap.Logger
 
 type ormLogger struct {
 	logger.Config
