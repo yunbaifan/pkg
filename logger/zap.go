@@ -37,37 +37,14 @@ func InitLogger(cfg LogConfig) (err error) {
 			return
 		}
 		var core zapcore.Core
-		// 自定义时间输出格式
-		customTimeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-			enc.AppendString("[" + t.Format("2006-01-02 15:04:05.000") + "]")
-		}
-		// 自定义日志级别显示
-		customLevelEncoder := func(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
-			enc.AppendString("[" + level.CapitalString() + "]")
-		}
-		// 自定义文件：行号输出项
-		customCallerEncoder := func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
-			//enc.AppendString("[" + l.traceId + "]") // 链路追踪id
-			enc.AppendString("[" + caller.TrimmedPath() + "]")
-		}
 		if cfg.Level == "debug" {
 			// 进入开发模式，日志输出到终端
-			encoderConfig := zapcore.EncoderConfig{
-				TimeKey:          "time",
-				LevelKey:         "level",
-				NameKey:          "logger",
-				CallerKey:        "line",
-				MessageKey:       "msg",
-				StacktraceKey:    "stacktrace",
-				LineEnding:       zapcore.DefaultLineEnding,
-				EncodeLevel:      customLevelEncoder, // 小写编码器
-				EncodeTime:       customTimeEncoder,
-				EncodeDuration:   zapcore.SecondsDurationEncoder, //
-				EncodeCaller:     customCallerEncoder,            // 全路径编码器
-				EncodeName:       zapcore.FullNameEncoder,
-				ConsoleSeparator: " | ",
-			}
-			consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
+			config := zap.NewDevelopmentEncoderConfig()
+			// 设置日志颜色
+			config.EncodeLevel = zapcore.LowercaseColorLevelEncoder
+			// 设置自定义时间格式
+			config.EncodeTime = getCustomTimeEncoder
+			consoleEncoder := zapcore.NewConsoleEncoder(config)
 			core = zapcore.NewTee(
 				zapcore.NewCore(encoder, writeSyncer, l),
 				zapcore.NewCore(consoleEncoder, zapcore.Lock(os.Stdout), zapcore.DebugLevel),
