@@ -45,14 +45,29 @@ func InitLogger(cfg LogConfig) (err error) {
 		customLevelEncoder := func(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
 			enc.AppendString("[" + level.CapitalString() + "]")
 		}
+		// 自定义文件：行号输出项
+		customCallerEncoder := func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
+			//enc.AppendString("[" + l.traceId + "]") // 链路追踪id
+			enc.AppendString("[" + caller.TrimmedPath() + "]")
+		}
 		if cfg.Level == "debug" {
 			// 进入开发模式，日志输出到终端
-			config := zap.NewDevelopmentEncoderConfig()
-			// 设置日志颜色
-			config.EncodeLevel = customLevelEncoder
-			// 设置自定义时间格式
-			config.EncodeTime = customTimeEncoder
-			consoleEncoder := zapcore.NewConsoleEncoder(config)
+			encoderConfig := zapcore.EncoderConfig{
+				TimeKey:          "time",
+				LevelKey:         "level",
+				NameKey:          "logger",
+				CallerKey:        "line",
+				MessageKey:       "msg",
+				StacktraceKey:    "stacktrace",
+				LineEnding:       zapcore.DefaultLineEnding,
+				EncodeLevel:      customLevelEncoder, // 小写编码器
+				EncodeTime:       customTimeEncoder,
+				EncodeDuration:   zapcore.SecondsDurationEncoder, //
+				EncodeCaller:     customCallerEncoder,            // 全路径编码器
+				EncodeName:       zapcore.FullNameEncoder,
+				ConsoleSeparator: " | ",
+			}
+			consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
 			core = zapcore.NewTee(
 				zapcore.NewCore(encoder, writeSyncer, l),
 				zapcore.NewCore(consoleEncoder, zapcore.Lock(os.Stdout), zapcore.DebugLevel),
