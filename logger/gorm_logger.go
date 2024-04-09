@@ -3,19 +3,11 @@ package logger
 import (
 	"context"
 	"fmt"
-	"github.com/zeromicro/go-zero/core/logx"
 	"go.uber.org/zap"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
 	"time"
 )
-
-var (
-	// Logger logger
-	Logger *ZapLogger
-)
-
-type ZapLogger *zap.Logger
 
 type ormLogger struct {
 	logger.Config
@@ -64,10 +56,10 @@ func (l *ormLogger) LogMode(level logger.LogLevel) logger.Interface {
 // Info print info
 func (l ormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Info {
-		logx.WithContext(ctx).Infow(
+		FromZapLoggerContext(ctx).Info(
 			msg,
-			logx.Field("file", utils.FileWithLineNum()),
-			logx.Field("rawData", data),
+			zap.String("file", utils.FileWithLineNum()),
+			zap.Reflect("rawData", data),
 		)
 	}
 }
@@ -75,10 +67,10 @@ func (l ormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
 // Warn print warn messages
 func (l ormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Warn {
-		logx.WithContext(ctx).Infow(
+		FromZapLoggerContext(ctx).Info(
 			msg,
-			logx.Field("file", utils.FileWithLineNum()),
-			logx.Field("rawData", data),
+			zap.String("file", utils.FileWithLineNum()),
+			zap.Reflect("rawData", data),
 		)
 	}
 }
@@ -86,10 +78,10 @@ func (l ormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
 // Error print error messages
 func (l ormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Error {
-		logx.WithContext(ctx).Errorw(
+		FromZapLoggerContext(ctx).Error(
 			msg,
-			logx.Field("file", utils.FileWithLineNum()),
-			logx.Field("rawData", data),
+			zap.String("file", utils.FileWithLineNum()),
+			zap.Any("rawData", data),
 		)
 	}
 }
@@ -102,32 +94,32 @@ func (l ormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string
 	switch {
 	case err != nil && l.LogLevel >= logger.Error:
 		sql, rows := fc()
-		logx.WithContext(ctx).Errorw(
+		FromZapLoggerContext(ctx).Error(
 			"gorm trace log",
-			logx.Field("file", utils.FileWithLineNum()),
-			logx.Field("err", err),
-			logx.Field("elapsed", float64(elapsed.Nanoseconds())/1e6),
-			logx.Field("rows", rows),
-			logx.Field("sql", sql),
+			zap.String("file", utils.FileWithLineNum()),
+			zap.Any("err", err),
+			zap.Any("elapsed", float64(elapsed.Nanoseconds())/1e6),
+			zap.Any("rows", rows),
+			zap.Any("sql", sql),
 		)
 	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= logger.Warn:
 		sql, rows := fc()
-		logx.WithContext(ctx).Errorw(
+		FromZapLoggerContext(ctx).Error(
 			"gorm trace log",
-			logx.Field("file", utils.FileWithLineNum()),
-			logx.Field("slowLog", fmt.Sprintf("slow sql more than %v", l.SlowThreshold)),
-			logx.Field("elapsed", float64(elapsed.Nanoseconds())/1e6),
-			logx.Field("rows", rows),
-			logx.Field("sql", sql),
+			zap.Any("file", utils.FileWithLineNum()),
+			zap.Any("slowLog", fmt.Sprintf("slow sql more than %v", l.SlowThreshold)),
+			zap.Any("elapsed", float64(elapsed.Nanoseconds())/1e6),
+			zap.Any("rows", rows),
+			zap.Any("sql", sql),
 		)
 	case l.LogLevel == logger.Info:
 		sql, rows := fc()
-		logx.WithContext(ctx).Infow(
+		FromZapLoggerContext(ctx).Info(
 			"gorm info log",
-			logx.Field("file", utils.FileWithLineNum()),
-			logx.Field("elapsed", float64(elapsed.Nanoseconds())/1e6),
-			logx.Field("rows", rows),
-			logx.Field("sql", sql),
+			zap.Any("file", utils.FileWithLineNum()),
+			zap.Any("elapsed", float64(elapsed.Nanoseconds())/1e6),
+			zap.Any("rows", rows),
+			zap.Any("sql", sql),
 		)
 	}
 }
