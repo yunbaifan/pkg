@@ -37,13 +37,21 @@ func InitLogger(cfg LogConfig) (err error) {
 			return
 		}
 		var core zapcore.Core
+		// 自定义时间输出格式
+		customTimeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+			enc.AppendString("[" + t.Format("2006-01-02 15:04:05.000") + "]")
+		}
+		// 自定义日志级别显示
+		customLevelEncoder := func(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+			enc.AppendString("[" + level.CapitalString() + "]")
+		}
 		if cfg.Level == "debug" {
 			// 进入开发模式，日志输出到终端
 			config := zap.NewDevelopmentEncoderConfig()
 			// 设置日志颜色
-			config.EncodeLevel = zapcore.LowercaseColorLevelEncoder
+			config.EncodeLevel = customLevelEncoder
 			// 设置自定义时间格式
-			config.EncodeTime = getCustomTimeEncoder
+			config.EncodeTime = customTimeEncoder
 			consoleEncoder := zapcore.NewConsoleEncoder(config)
 			core = zapcore.NewTee(
 				zapcore.NewCore(encoder, writeSyncer, l),
@@ -84,7 +92,7 @@ func getLogWriter(filename string, maxSize, maxBackup, maxAge int) zapcore.Write
 
 // CustomTimeEncoder 自定义日志输出时间格式
 func getCustomTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString("[go-mall] " + t.Format("2006/01/02 - 15:04:05.000"))
+	enc.AppendString("[go-mall]" + t.Format("2006/01/02 - 15:04:05.000"))
 }
 
 func LogWith(withs ...zap.Field) *zap.Logger {
