@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	// Logger logger
 	Logger *ZapLogger
 )
 
