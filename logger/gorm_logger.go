@@ -3,10 +3,11 @@ package logger
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"go.uber.org/zap"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
-	"time"
 )
 
 type ormLogger struct {

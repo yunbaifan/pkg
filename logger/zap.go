@@ -1,11 +1,13 @@
 package logger
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"time"
 
 	"context"
+
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -18,17 +20,20 @@ type (
 		MaxSize    int    `json:"maxSize" yaml:"maxSize" default:"100" description:"日志文件最大大小(MB)"`
 		MaxAge     int    `json:"maxAge" yaml:"maxAge" default:"7" description:"日志文件最大保存天数"`
 		MaxBackups int    `json:"maxBackups" yaml:"maxBackups" default:"10" description:"日志文件最多保存多少个备份"`
+		ServerName string `json:"serverName" yaml:"serverName" default:"go-mall" description:"服务名称"`
 	}
 )
 
 var (
-	syncOnce sync.Once
-	Logger   *zap.Logger
+	syncOnce   sync.Once
+	Logger     *zap.Logger
+	serverName string
 )
 
 // InitLogger 初始化Logger
 func InitLogger(cfg LogConfig) (err error) {
 	syncOnce.Do(func() {
+		serverName = cfg.ServerName
 		writeSyncer := getLogWriter(cfg.Filename, cfg.MaxSize, cfg.MaxBackups, cfg.MaxAge)
 		encoder := getEncoder()
 		var l = new(zapcore.Level)
@@ -84,7 +89,7 @@ func getLogWriter(filename string, maxSize, maxBackup, maxAge int) zapcore.Write
 
 // CustomTimeEncoder 自定义日志输出时间格式
 func getCustomTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString("[go-mall]" + t.Format("2006/01/02 - 15:04:05.000"))
+	enc.AppendString(fmt.Sprintf("[%s] %s", serverName, t.Format("2006/01/02 - 15:04:05.000")))
 }
 
 func LogWith(withs ...zap.Field) *zap.Logger {

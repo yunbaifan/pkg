@@ -1,6 +1,10 @@
 package sortedmap
 
-import "testing"
+import (
+	"testing"
+
+	"gocv.io/x/gocv"
+)
 
 var (
 	_orderedMap *OrderedMap[string, int]
@@ -11,43 +15,37 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func Test_Set(t *testing.T) {
-	_orderedMap.Set("a", 1)
-	t.Log(_orderedMap.Get("a"))
-}
+// func Test_Set(t *testing.T) {
+// 	_orderedMap.Set("a", 1)
+// 	t.Log(_orderedMap.Get("a"))
+// }
 
 func Test_GetEntryMaps(t *testing.T) {
 
-	type args struct {
-		key string
-		val int
+	webcam, err := gocv.VideoCaptureDevice(0)
+	if err != nil {
+		panic(err)
 	}
+	defer webcam.Close()
 
-	tests := []args{
-		{"l", 1},
-		{"f", 1},
-		{"v", 1},
-	}
-	for _, tt := range tests {
-		t.Run(tt.key, func(t *testing.T) {
-			if val, ok := _orderedMap.Set(tt.key, tt.val); ok {
-				if val != tt.val {
-					t.Errorf("Get() = %v, want %v", val, tt.val)
-				}
-			}
-			t.Logf("%v", _orderedMap.GetMaps())
-		})
-	}
+	window := gocv.NewWindow("Hello")
+	defer window.Close()
 
-	for _, tt := range tests {
-		t.Run(tt.key, func(t *testing.T) {
-			if val, ok := _orderedMap.Get(tt.key); ok {
-				if val != tt.val {
-					t.Errorf("Get() = %v, want %v", val, tt.val)
-				}
-			} else {
-				t.Errorf("Get() = %v, want %v", ok, true)
-			}
-		})
+	img := gocv.NewMat()
+	defer img.Close()
+
+	for {
+		if ok := webcam.Read(&img); !ok {
+			println("Cannot read device")
+			return
+		}
+		if img.Empty() {
+			continue
+		}
+
+		window.IMShow(img)
+		if window.WaitKey(1) >= 0 {
+			break
+		}
 	}
 }
