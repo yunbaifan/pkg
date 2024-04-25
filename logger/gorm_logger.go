@@ -2,16 +2,19 @@ package logger
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"go.uber.org/zap"
+	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"gorm.io/gorm/utils"
+	gormLogger "gorm.io/gorm/logger"
+	gormUtils "gorm.io/gorm/utils"
 )
 
 type ormLogger struct {
 	logger.Config
+	nanosecondsToMilliseconds float64
 }
 
 type Option func(c *ormLogger)
@@ -35,11 +38,12 @@ func WithColorful(colorful bool) Option {
 
 func NewGormLogger(opt ...Option) logger.Interface {
 	newLogger := &ormLogger{
-		logger.Config{
+		Config: logger.Config{
 			SlowThreshold: 100 * time.Millisecond,
 			LogLevel:      logger.Info,
 			Colorful:      false,
 		},
+		nanosecondsToMilliseconds: 1e6,
 	}
 	for _, o := range opt {
 		o(newLogger)
@@ -56,71 +60,67 @@ func (l *ormLogger) LogMode(level logger.LogLevel) logger.Interface {
 
 // Info print info
 func (l ormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= logger.Info {
-		FromZapLoggerContext(ctx).Info(
-			msg,
-			zap.String("file", utils.FileWithLineNum()),
-			zap.Reflect("rawData", data),
-		)
-	}
+	Info(ctx, msg, data...)
 }
 
 // Warn print warn messages
 func (l ormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= logger.Warn {
-		FromZapLoggerContext(ctx).Info(
-			msg,
-			zap.String("file", utils.FileWithLineNum()),
-			zap.Reflect("rawData", data),
-		)
-	}
+	Warn(ctx, msg, nil, data...)
 }
 
 // Error print error messages
 func (l ormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= logger.Error {
-		FromZapLoggerContext(ctx).Error(
-			msg,
-			zap.String("file", utils.FileWithLineNum()),
-			zap.Any("rawData", data),
-		)
-	}
+	Error(ctx, msg, nil, data...)
 }
 
 func (l ormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
-	if l.LogLevel <= logger.Silent {
+	if l.LogLevel <= gormLogger.Silent {
 		return
 	}
 	elapsed := time.Since(begin)
 	switch {
-	case err != nil && l.LogLevel >= logger.Error:
+	case err != nil && l.LogLevel >= gormLogger.Error &&
+		(!errors.Is(err, gorm.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
 		sql, rows := fc()
-		FromZapLoggerContext(ctx).Error(
-			"gorm trace log",
-			zap.String("file", utils.FileWithLineNum()),
-			zap.Any("err", err),
-			zap.Any("elapsed", float64(elapsed.Nanoseconds())/1e6),
-			zap.Any("rows", rows),
-			zap.Any("sql", sql),
-		)
-	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= logger.Warn:
+		if rows == -1 {
+			Error(ctx, "sql exec detail", err, "gorm",
+				gormUtils.FileWithLineNum(), "elapsed time",
+				fmt.Sprintf("%f(ms)", float64(elapsed.Nanoseconds())/l.nanosecondsToMilliseconds),
+				"sql", sql)
+		} else {
+			Error(ctx, "sql exec detail", err, "gorm",
+				gormUtils.FileWithLineNum(), "elapsed time",
+				fmt.Sprintf("%f(ms)", float64(elapsed.Nanoseconds())/l.nanosecondsToMilliseconds),
+				"rows", rows, "sql", sql)
+		}
+	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= gormLogger.Warn:
 		sql, rows := fc()
-		FromZapLoggerContext(ctx).Error(
-			"gorm trace log",
-			zap.Any("file", utils.FileWithLineNum()),
-			zap.Any("slowLog", fmt.Sprintf("slow sql more than %v", l.SlowThreshold)),
-			zap.Any("elapsed", float64(elapsed.Nanoseconds())/1e6),
-			zap.Any("rows", rows),
-			zap.Any("sql", sql),
-		)
-	case l.LogLevel == logger.Info:
+		slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
+		if rows == -1 {
+			Warn(ctx, "sql exec detail", nil, "gorm",
+				gormUtils.FileWithLineNum(), "slow sql",
+				slowLog, "elapsed time",
+				fmt.Sprintf("%f(ms)",
+					float64(elapsed.Nanoseconds())/l.nanosecondsToMilliseconds), "sql", sql)
+		} else {
+			Warn(ctx, "sql exec detail", nil, "gorm",
+				gormUtils.FileWithLineNum(), "slow sql",
+				slowLog, "elapsed time",
+				fmt.Sprintf("%f(ms)", float64(elapsed.Nanoseconds())/l.nanosecondsToMilliseconds),
+				"rows", rows, "sql", sql)
+		}
+	case l.LogLevel == gormLogger.Info:
 		sql, rows := fc()
-		FromZapLoggerContext(ctx).Info(
-			"gorm info log",
-			zap.Any("file", utils.FileWithLineNum()),
-			zap.Any("elapsed", float64(elapsed.Nanoseconds())/1e6),
-			zap.Any("rows", rows),
-			zap.Any("sql", sql),
-		)
+		if rows == -1 {
+			Debug(ctx, "sql exec detail", "gorm",
+				gormUtils.FileWithLineNum(), "elapsed time", fmt.Sprintf("%f(ms)",
+					float64(elapsed.Nanoseconds())/l.nanosecondsToMilliseconds), "sql", sql)
+		} else {
+			Debug(ctx, "sql exec detail", "gorm",
+				gormUtils.FileWithLineNum(), "elapsed time",
+				fmt.Sprintf("%f(ms)",
+					float64(elapsed.Nanoseconds())/l.nanosecondsToMilliseconds),
+				"rows", rows, "sql", sql)
+		}
 	}
 }
